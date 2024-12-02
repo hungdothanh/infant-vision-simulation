@@ -1,5 +1,6 @@
 import os
-from data.dataloader import InfantVisionDataset, measure_loading_performance
+from data.dataloader import InfantVisionDataset
+from utils.metrics_proj1 import measure_loading_performance
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from PIL import Image

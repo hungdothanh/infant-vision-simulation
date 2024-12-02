@@ -1,3 +1,6 @@
 
 __pycache__/
 dataset/
+runs/
+best_weights/
+figures/

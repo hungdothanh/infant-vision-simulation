@@ -4,6 +4,7 @@ from torchvision import transforms
 from PIL import Image
 import os
 import time
+import pandas as pd
 
 
 class InfantVisionDataset(Dataset):
@@ -39,8 +40,15 @@ class InfantVisionDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
+
         image_path = self.image_paths[idx]
         image = Image.open(image_path).convert("RGB")
+
+        # Extract label from filename
+        # label = 1 if "dog" in os.path.basename(image_path) else 0
+
+        filename = os.path.basename(image_path)
+        label = 0 if "dog" in filename else 1  # 0 for dog, 1 for cat
 
         if self.apply_blur and self.blur_transform:
             image = self.blur_transform(image)
@@ -49,15 +57,7 @@ class InfantVisionDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image
+        return image, label
 
 
-def measure_loading_performance(data_loader, total_images=100):
-    start_time = time.time()
-    images_loaded = 0
-    for images in data_loader:
-        images_loaded += images.size(0)
-        if images_loaded >= total_images:
-            break
-    end_time = time.time()
-    return end_time - start_time
+
