@@ -18,7 +18,6 @@ def plot_losses(train_losses, val_losses, num_epochs, save_dir):
     axs[1].set_title('Validation Loss')
 
     plt.tight_layout()
-    #writer.add_figure("Loss_Curve", fig)
 
     os.makedirs(save_dir, exist_ok=True)
     fig.savefig(f"{save_dir}/loss_curves.png")
@@ -38,7 +37,6 @@ def plot_metrics(val_recalls, val_precisions, num_epochs, save_dir):
     axs[1].set_title('Validation Precision')
 
     plt.tight_layout()
-    #writer.add_figure("Metrics_Curve", fig)
 
     os.makedirs(save_dir, exist_ok=True)
     fig.savefig(f"{save_dir}/metrics_curves.png")
@@ -57,7 +55,6 @@ def plot_confusion_matrix(conf_matrix, save_dir):
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
     ax.set_title('Confusion Matrix')
-    # writer.add_figure("Confusion_Matrix", fig)
 
     # Save the figure
     os.makedirs(save_dir, exist_ok=True)

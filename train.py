@@ -9,17 +9,12 @@ from torchvision import transforms
 from data.dataloader import InfantVisionDataset
 from model import ResNet50
 from tqdm import tqdm
-# from sklearn.metrics import recall_score, precision_score, classification_report
 from torchmetrics.functional import confusion_matrix
-from torch.utils.tensorboard import SummaryWriter
 from utils.plots import plot_losses, plot_metrics, plot_confusion_matrix
 
 
 def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epochs, batch_size, lr, save_folder):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # TensorBoard writer
-    # writer = SummaryWriter()
 
     # Define transformations
     transform = transforms.Compose([
@@ -80,7 +75,6 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epo
 
         train_loss = running_loss / len(train_loader)
         train_losses.append(train_loss)
-        # writer.add_scalar("Loss/Train", train_loss, epoch + 1)
 
         # Validation phase
         model.eval()
@@ -120,43 +114,6 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epo
         print(f"Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
         print(f"Recall: {val_recall:.2f}, Precision: {val_precision:.2f}")
 
-        # # Validation phase
-        # model.eval()
-        # val_loss = 0.0
-        # val_recall = 0.0
-        # val_precision = 0.0
-        # all_labels = []
-        # all_predictions = []
-
-        # with torch.no_grad():
-        #     for inputs, labels in val_loader:
-        #         inputs, labels = inputs.to(device), labels.to(device)
-
-        #         outputs = model(inputs)
-        #         loss = criterion(outputs, labels)
-        #         val_loss += loss.item()
-        #         _, pred = torch.max(outputs.data, 1)
-
-        #         all_labels.extend(labels.cpu().numpy())
-        #         all_predictions.extend(pred.cpu().numpy())
-
-
-        # # writer.add_scalar("Loss/Validation", val_loss, epoch + 1)
-        # # writer.add_scalar("Recall/Validation", val_recall, epoch + 1)
-        # # writer.add_scalar("Precision/Validation", val_precision, epoch + 1)
- 
-        # val_loss = val_loss / len(val_loader)
-        # val_recall = recall_score(all_labels, all_predictions, average='macro')
-        # val_precision = precision_score(all_labels, all_predictions, average='macro')
-
-        # # Logging metrics
-        # val_losses.append(val_loss)
-        # val_recalls.append(val_recall)
-        # val_precisions.append(val_precision)
-
-        # print(f"Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
-        # print(f"Recall: {val_recall:.2f}, Precision: {val_precision:.2f} \n")
-
         # Save the best model
         if val_precision > best_val_precision:
             best_val_precision = val_precision
@@ -177,8 +134,6 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epo
     plot_losses(train_losses, val_losses, num_epochs, save_folder)
     plot_metrics(val_recalls, val_precisions, num_epochs, save_folder)
     plot_confusion_matrix(conf_matrix, save_folder)
-
-    # writer.close()
 
 
 if __name__ == "__main__":
