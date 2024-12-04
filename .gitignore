@@ -1,6 +1,9 @@
 
 __pycache__/
 dataset/
+dataset1/
 runs/
 best_weights/
 figures/
+exp/
+test_conf_matrix.py

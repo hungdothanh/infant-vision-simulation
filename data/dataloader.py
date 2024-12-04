@@ -44,9 +44,6 @@ class InfantVisionDataset(Dataset):
         image_path = self.image_paths[idx]
         image = Image.open(image_path).convert("RGB")
 
-        # Extract label from filename
-        # label = 1 if "dog" in os.path.basename(image_path) else 0
-
         filename = os.path.basename(image_path)
         label = 0 if "dog" in filename else 1  # 0 for dog, 1 for cat
 

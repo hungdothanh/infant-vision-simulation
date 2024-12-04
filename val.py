@@ -1,13 +1,30 @@
-
 import argparse
+import os
+import random
+import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from data.dataloader import InfantVisionDataset
 from model import ResNet50
 
+def plot_images_with_predictions(images, labels, predictions):
+    class_names = ["dog", "cat"]  # Assuming 0 is cat and 1 is dog
+    num_images = len(images)
+    fig, axes = plt.subplots(1, num_images, figsize=(num_images * 5, 5))
+    
+    if num_images == 1:
+        axes = [axes]  # Ensure axes is iterable when there's only one image
+    
+    for i, (image, label, prediction) in enumerate(zip(images, labels, predictions)):
+        axes[i].imshow(image.permute(1, 2, 0).cpu().numpy())
+        axes[i].set_title(f"Label: {class_names[label]}, Pred: {class_names[prediction]}")
+        axes[i].axis('off')
+    
+    plt.tight_layout()
+    plt.show()
 
-def validate(test_dir, batch_size):
+def validate(test_dir, batch_size, num_images_to_predict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Define transformations
@@ -18,7 +35,7 @@ def validate(test_dir, batch_size):
     ])
 
     # Initialize dataset and dataloader
-    test_dataset = InfantVisionDataset(image_dir=test_dir, transform=transform)
+    test_dataset = InfantVisionDataset(image_dir=test_dir, age_in_months=1000, apply_blur=False, apply_contrast=False, transform=transform)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # Load model
@@ -38,18 +55,35 @@ def validate(test_dir, batch_size):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    accuracy = 100 * correct / total
-    print(f"Test Accuracy: {accuracy:.2f}%")
+    accuracy = correct / total
+    print(f"Test Accuracy: {accuracy:.2f}")
 
+    # Select random images from the test set
+    random_indices = random.sample(range(len(test_dataset)), num_images_to_predict)
+
+    images = []
+    labels = []
+    predictions = []
+
+    with torch.no_grad():
+        for idx in random_indices:
+            image, label = test_dataset[idx]
+            images.append(image)
+            labels.append(label)
+
+            image = image.unsqueeze(0).to(device)
+            output = model(image)
+            _, predicted = torch.max(output.data, 1)
+            predictions.append(predicted.item())
+
+    # Plot the images with their corresponding labels and predictions
+    plot_images_with_predictions(images, labels, predictions)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test_dir", type=str, help="Path to the test data directory")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
-
+    parser = argparse.ArgumentParser(description="Validate the model on the test set")
+    parser.add_argument("test_dir", type=str, help="Directory of the test dataset")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for testing")
+    parser.add_argument("--num_img", type=int, default=5, help="Number of random images to predict and plot")
     args = parser.parse_args()
 
-    validate(
-        test_dir=args.test_dir,
-        batch_size=args.batch_size
-    )
+    validate(args.test_dir, args.batch_size, args.num_img)

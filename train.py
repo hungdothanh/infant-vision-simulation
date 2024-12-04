@@ -1,4 +1,5 @@
 import os
+import time
 import argparse
 import torch
 from torch.utils.data import DataLoader
@@ -8,16 +9,17 @@ from torchvision import transforms
 from data.dataloader import InfantVisionDataset
 from model import ResNet50
 from tqdm import tqdm
-from sklearn.metrics import recall_score, precision_score
+# from sklearn.metrics import recall_score, precision_score, classification_report
+from torchmetrics.functional import confusion_matrix
 from torch.utils.tensorboard import SummaryWriter
 from utils.plots import plot_losses, plot_metrics, plot_confusion_matrix
 
 
-def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epochs, batch_size, lr):
+def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epochs, batch_size, lr, save_folder):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # TensorBoard writer
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     # Define transformations
     transform = transforms.Compose([
@@ -52,14 +54,14 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epo
     optimizer = SGD(model.parameters(), lr=lr, momentum=0.9)
 
     # Create directory for saving best weights
-    save_dir = "best_weights"
-    os.makedirs(save_dir, exist_ok=True)
-    best_model_path = os.path.join(save_dir, "best_model.pth")
-    best_val_accuracy = 0.0
+    os.makedirs(save_folder, exist_ok=True)
+    best_weight_path = os.path.join(save_folder, "best_weights.pth")
+    best_val_precision = 0.0
 
     train_losses, val_losses = [], []
-    val_accuracies, val_recalls, val_precisions = [], [], []
+    val_recalls, val_precisions = [], []
 
+    start_time = time.time()  # Start timer
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -78,15 +80,12 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epo
 
         train_loss = running_loss / len(train_loader)
         train_losses.append(train_loss)
-        writer.add_scalar("Loss/Train", train_loss, epoch + 1)
+        # writer.add_scalar("Loss/Train", train_loss, epoch + 1)
 
         # Validation phase
         model.eval()
         val_loss = 0.0
-        val_correct = 0
-        val_total = 0
-        all_labels = []
-        all_predictions = []
+        conf_matrix = torch.zeros(num_classes, num_classes)  # Initialize confusion matrix
 
         with torch.no_grad():
             for inputs, labels in val_loader:
@@ -95,43 +94,91 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, num_epo
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
+                _, pred = torch.max(outputs, 1)
 
-                val_total += labels.size(0)
-                val_correct += (predicted == labels).sum().item()
-                all_labels.extend(labels.cpu().numpy())
-                all_predictions.extend(predicted.cpu().numpy())
+                # Update confusion matrix
+                conf_matrix += confusion_matrix(pred.cpu(), labels.cpu(), task="binary", num_classes=num_classes)
 
-        val_accuracy = 100 * val_correct / val_total
-        val_recall = recall_score(all_labels, all_predictions, average='macro')
-        val_precision = precision_score(all_labels, all_predictions, average='macro')
+        # Calculate precision and recall from the confusion matrix
+        true_positives = conf_matrix.diag()
+        total_predicted = conf_matrix.sum(dim=0)
+        total_actual = conf_matrix.sum(dim=1)
+
+        val_precision = (true_positives / total_predicted).nan_to_num(0).mean().item()  # Macro-averaged precision
+        val_recall = (true_positives / total_actual).nan_to_num(0).mean().item()        # Macro-averaged recall
+
+        # Class-wise precision and recall
+        class_precisions = (true_positives / total_predicted).nan_to_num(0)
+        class_recalls = (true_positives / total_actual).nan_to_num(0)
+
+        # Logging metrics
         val_loss = val_loss / len(val_loader)
-
         val_losses.append(val_loss)
-        val_accuracies.append(val_accuracy)
-        val_recalls.append(val_recall)
         val_precisions.append(val_precision)
-
-        writer.add_scalar("Loss/Validation", val_loss, epoch + 1)
-        writer.add_scalar("Accuracy/Validation", val_accuracy, epoch + 1)
-        writer.add_scalar("Recall/Validation", val_recall, epoch + 1)
-        writer.add_scalar("Precision/Validation", val_precision, epoch + 1)
+        val_recalls.append(val_recall)
 
         print(f"Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
-        print(f"Accuracy: {val_accuracy:.2f}%, Recall: {val_recall:.2f}, Precision: {val_precision:.2f}")
+        print(f"Recall: {val_recall:.2f}, Precision: {val_precision:.2f}")
+
+        # # Validation phase
+        # model.eval()
+        # val_loss = 0.0
+        # val_recall = 0.0
+        # val_precision = 0.0
+        # all_labels = []
+        # all_predictions = []
+
+        # with torch.no_grad():
+        #     for inputs, labels in val_loader:
+        #         inputs, labels = inputs.to(device), labels.to(device)
+
+        #         outputs = model(inputs)
+        #         loss = criterion(outputs, labels)
+        #         val_loss += loss.item()
+        #         _, pred = torch.max(outputs.data, 1)
+
+        #         all_labels.extend(labels.cpu().numpy())
+        #         all_predictions.extend(pred.cpu().numpy())
+
+
+        # # writer.add_scalar("Loss/Validation", val_loss, epoch + 1)
+        # # writer.add_scalar("Recall/Validation", val_recall, epoch + 1)
+        # # writer.add_scalar("Precision/Validation", val_precision, epoch + 1)
+ 
+        # val_loss = val_loss / len(val_loader)
+        # val_recall = recall_score(all_labels, all_predictions, average='macro')
+        # val_precision = precision_score(all_labels, all_predictions, average='macro')
+
+        # # Logging metrics
+        # val_losses.append(val_loss)
+        # val_recalls.append(val_recall)
+        # val_precisions.append(val_precision)
+
+        # print(f"Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
+        # print(f"Recall: {val_recall:.2f}, Precision: {val_precision:.2f} \n")
 
         # Save the best model
-        if val_accuracy > best_val_accuracy:
-            best_val_accuracy = val_accuracy
-            torch.save(model.state_dict(), best_model_path)
-            print(f"Best model saved with accuracy: {best_val_accuracy:.2f}% \n")
+        if val_precision > best_val_precision:
+            best_val_precision = val_precision
+            torch.save(model.state_dict(), best_weight_path)
 
-    # Plot and save figures
-    plot_losses(train_losses, val_losses, num_epochs, writer)
-    plot_metrics(val_accuracies, val_recalls, val_precisions, num_epochs, writer)
-    plot_confusion_matrix(all_labels, all_predictions, writer)
+    print("\nTraining completed...\n")
+    print("Precision and Recall for each class:\n")
+    print("Class\tPrecision\tRecall")
+    for i in range(num_classes):
+        print(f"{i}\t{class_precisions[i].item():.2f}\t\t{class_recalls[i].item():.2f}")
 
-    writer.close()
+
+    end_time = time.time()  # End timer
+    total_time = (end_time - start_time)/3600
+    print(f"Total training time: {total_time:.2f} hours")
+
+    # # Plot and save figures
+    plot_losses(train_losses, val_losses, num_epochs, save_folder)
+    plot_metrics(val_recalls, val_precisions, num_epochs, save_folder)
+    plot_confusion_matrix(conf_matrix, save_folder)
+
+    # writer.close()
 
 
 if __name__ == "__main__":
@@ -144,6 +191,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
+    parser.add_argument("--save_folder", type=str, default="results", help="Folder name to save best weights and plots")
 
     args = parser.parse_args()
 
@@ -155,5 +203,6 @@ if __name__ == "__main__":
         apply_contrast=args.contrast,
         num_epochs=args.epochs,
         batch_size=args.batch_size,
-        lr=args.lr
+        lr=args.lr,
+        save_folder=args.save_folder
     )
