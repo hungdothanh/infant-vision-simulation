@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
 import os
 
 
@@ -60,3 +59,20 @@ def plot_confusion_matrix(conf_matrix, save_dir):
     os.makedirs(save_dir, exist_ok=True)
     fig.savefig(f"{save_dir}/confusion_matrix.png")
     plt.close(fig)
+
+
+def plot_images_with_predictions(images, labels, predictions):
+    class_names = ["dog", "cat"]  # Assuming 0 is cat and 1 is dog
+    num_images = len(images)
+    fig, axes = plt.subplots(1, num_images, figsize=(num_images * 5, 5))
+    
+    if num_images == 1:
+        axes = [axes]  # Ensure axes is iterable when there's only one image
+    
+    for i, (image, label, prediction) in enumerate(zip(images, labels, predictions)):
+        axes[i].imshow(image.permute(1, 2, 0).cpu().numpy())
+        axes[i].set_title(f"Label: {class_names[label]}, Pred: {class_names[prediction]}")
+        axes[i].axis('off')
+    
+    plt.tight_layout()
+    plt.show()

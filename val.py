@@ -7,22 +7,9 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from data.dataloader import InfantVisionDataset
 from model import ResNet50
+from utils.plots import plot_images_with_predictions
 
-def plot_images_with_predictions(images, labels, predictions):
-    class_names = ["dog", "cat"]  # Assuming 0 is cat and 1 is dog
-    num_images = len(images)
-    fig, axes = plt.subplots(1, num_images, figsize=(num_images * 5, 5))
-    
-    if num_images == 1:
-        axes = [axes]  # Ensure axes is iterable when there's only one image
-    
-    for i, (image, label, prediction) in enumerate(zip(images, labels, predictions)):
-        axes[i].imshow(image.permute(1, 2, 0).cpu().numpy())
-        axes[i].set_title(f"Label: {class_names[label]}, Pred: {class_names[prediction]}")
-        axes[i].axis('off')
-    
-    plt.tight_layout()
-    plt.show()
+
 
 def validate(test_dir, batch_size, num_images_to_predict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
