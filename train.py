@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torch.optim import SGD
 from torch.nn import CrossEntropyLoss
 from torchvision import models, transforms
+from torchsummary import summary
 from data.dataloader import InfantVisionDataset
 from model import ResNet50
 from tqdm import tqdm
@@ -48,14 +49,34 @@ def train(train_dir, val_dir, weights, age_in_months, apply_blur, apply_contrast
     num_classes = 2
     class_names = ["dog", "cat"]
 
-    model = ResNet50(num_classes=num_classes).to(device)
+    # CUSTOMIZED RESNET50 WITH INPUT PRE-TRAINED WEIGHT --------------------------
+    # model = ResNet50(num_classes=num_classes).to(device)
+    # if weights:
+    #     if os.path.exists(weights):
+    #         model.load_state_dict(torch.load(weights))
+    #         print(f"Loaded pre-trained weights!\n")
+    #     else:
+    #         print(f"Pre-trained weights NOT found. Training from scratch!\n")
+    
+    
+    # Load pre-trained ResNet50 -----------------------
+    print("Done! Loading model and pre-trained weight...\n")
+    model = models.resnet50(pretrained=True)
 
-    if weights:
-        if os.path.exists(weights):
-            model.load_state_dict(torch.load(weights))
-            print(f"Loaded pre-trained weights!\n")
-        else:
-            print(f"Pre-trained weights NOT found. Training from scratch!\n")
+    # Freeze all layers
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Replace the final fully connected layer
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+
+    # Ensure the final layer is trainable
+    for param in model.fc.parameters():
+        param.requires_grad = True
+
+    model = model.to(device)
+    print("Done! Summary of model architecture: ")
+    summary(model, input_size=(3, 224, 224), device=str(device))
 
     criterion = CrossEntropyLoss()
     optimizer = SGD(model.parameters(), lr=lr, momentum=0.9)
@@ -74,6 +95,7 @@ def train(train_dir, val_dir, weights, age_in_months, apply_blur, apply_contrast
 
     start_time = time.time()  # Start timer
     # Start training...
+    print("\nStart training! \n")
     for epoch in range(num_epochs):
         # Train phase
         model.train()
