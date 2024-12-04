@@ -14,7 +14,7 @@ from utils.plots import plot_losses, plot_metrics, plot_confusion_matrix
 from utils.metrics import precision_recall
 
 
-def train(train_dir, val_dir, weights, age_in_months, apply_blur, apply_contrast, num_epochs, batch_size, lr, save_folder):
+def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights, num_epochs, batch_size, lr, unfreeze_layer, save_folder):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print("Creating dataset...\n")
@@ -45,48 +45,64 @@ def train(train_dir, val_dir, weights, age_in_months, apply_blur, apply_contrast
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    # class
+    # Define class
     num_classes = 2
     class_names = ["dog", "cat"]
 
     # CUSTOMIZED RESNET50 WITH INPUT PRE-TRAINED WEIGHT --------------------------
     # model = ResNet50(num_classes=num_classes).to(device)
-    # if weights:
-    #     if os.path.exists(weights):
-    #         model.load_state_dict(torch.load(weights))
-    #         print(f"Loaded pre-trained weights!\n")
-    #     else:
-    #         print(f"Pre-trained weights NOT found. Training from scratch!\n")
+
     
-    
-    # Load pre-trained ResNet50 -----------------------
-    print("Done! Loading model and pre-trained weight...\n")
-    model = models.resnet50(pretrained=True)
+    # Load model based on input arguments
+    print(f"Done! Loading the model with modified prediction layer to solve {num_classes}-class classification task...\n")
+    if weights == 'resnet50':
+        model = models.resnet50(pretrained=True)
+        model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+        print("\nUsing pre-trained ResNet50 weights from ImageNet.\n")
+    elif weights:
+        model = models.resnet50()
+        model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+        model.load_state_dict(torch.load(weights))
+        print(f"Loaded weights from {weights}\n")
+    else:
+        model = models.resnet50(pretrained=False)
+        model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+        print("Training from scratch.\n")
 
-    # Freeze all layers
-    for param in model.parameters():
-        param.requires_grad = False
+    # Freeze layers based on the unfreeze_layer input
+    if unfreeze_layer:
+        # Freeze all parameters initially
+        for param in model.parameters():
+            param.requires_grad = False
 
-    # Replace the final fully connected layer
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+        layers_to_unfreeze = unfreeze_layer.split(",")  # Split by comma for multiple layers
+        layers_to_unfreeze = [layer.strip() for layer in layers_to_unfreeze]  # Clean up spaces
 
-    # Ensure the final layer is trainable
-    for param in model.fc.parameters():
-        param.requires_grad = True
+        for layer_name in layers_to_unfreeze:
+            if hasattr(model, layer_name):
+                target_layer = getattr(model, layer_name)
+                for param in target_layer.parameters():
+                    param.requires_grad = True
+                print(f"Layer '{layer_name}' is now trainable. The others are freezed.")
+            else:
+                raise ValueError(f"Layer '{layer_name}' not found in the model.")
+
 
     model = model.to(device)
+
     print("Done! Summary of model architecture: ")
     summary(model, input_size=(3, 224, 224), device=str(device))
 
+    # Define loss function and optimizer
     criterion = CrossEntropyLoss()
     optimizer = SGD(model.parameters(), lr=lr, momentum=0.9)
 
     # Create directory for saving best weights
     os.makedirs(save_folder, exist_ok=True)
     best_weight_path = os.path.join(save_folder, "best_weights.pth")
-    best_val_precision = 0.0
+    best_val_loss = float('inf')
     best_conf_matrix = torch.zeros(num_classes, num_classes)
-    best_val_epoch = 0
+    best_epoch = 0
 
     # Lists for logging and plotting
     train_losses, val_losses = [], []
@@ -153,9 +169,9 @@ def train(train_dir, val_dir, weights, age_in_months, apply_blur, apply_contrast
         print(f"Precision:     {val_precision:.2f},     Recall:          {val_recall:.2f}\n")
 
         # Save the best model
-        if val_precision > best_val_precision:
-            best_val_epoch = epoch
-            best_val_precision = val_precision
+        if val_loss < best_val_loss or best_val_loss is None:
+            best_epoch = epoch
+            best_val_loss = val_loss
             best_conf_matrix = conf_matrix
             torch.save(model.state_dict(), best_weight_path)
 
@@ -164,13 +180,13 @@ def train(train_dir, val_dir, weights, age_in_months, apply_blur, apply_contrast
     total_time = (end_time - start_time)/3600
     print(f"Total training time: {total_time:.2f} hours\n")
 
-    print(f"Performance Summary (best model at epoch {best_val_epoch}):")
+    print(f"Performance Summary (best model at epoch {best_epoch}):")
     print("-----------------------------")
     print("Class\tPrecision\tRecall")
     for i in range(num_classes):
         class_name = class_names[i]
-        precision = class_precisions[best_val_epoch][i].item()
-        recall = class_recalls[best_val_epoch][i].item()
+        precision = class_precisions[best_epoch][i].item()
+        recall = class_recalls[best_epoch][i].item()
         print(f"{class_name}\t{precision:.2f}\t\t{recall:.2f}")
     print("-----------------------------\n")
 
@@ -184,13 +200,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_dir", type=str, help="Path to the directory containing images")
     parser.add_argument("--val_dir", type=str, help="Path to the directory containing validation images")
-    parser.add_argument("--weights", type=str, default='', help="Path to pre-trained weights (leave blank to train from scratch)")
-    parser.add_argument("--age_in_months", type=int, default=0, help="Age of the infant in months")
+    parser.add_argument("--age", type=int, default=0, help="Age of the infant in months")
     parser.add_argument("--blur", action="store_true", help="Apply blur transformation")
     parser.add_argument("--contrast", action="store_true", help="Apply contrast transformation")
+    parser.add_argument("--weights", type=str, default='', 
+                        help="Path to pre-trained weights (leave blank to train from scratch/resnet50 to use pretrained w)")
     parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
+    parser.add_argument("--unfreeze", type=str, default='', 
+                        help="Comma-separated layer names to unfreeze, e.g., 'fc,layer4' (leave blank or by defaults to train normally)")
     parser.add_argument("--save_folder", type=str, default="results", help="Folder name to save best weights and plots")
 
     args = parser.parse_args()
@@ -198,12 +217,13 @@ if __name__ == "__main__":
     train(
         train_dir=args.train_dir,
         val_dir=args.val_dir,
-        weights = args.weights,
-        age_in_months=args.age_in_months,
+        age_in_months=args.age,
         apply_blur=args.blur,
         apply_contrast=args.contrast,
+        weights = args.weights,
         num_epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
+        unfreeze_layer=args.unfreeze,
         save_folder=args.save_folder
     )
