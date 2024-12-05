@@ -1,7 +1,6 @@
 
 
 import os
-import sys
 import time
 import yaml
 import argparse
@@ -147,6 +146,10 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         save_folder = os.path.join("results", f"{save_folder_name}_{counter}")
     os.makedirs(save_folder, exist_ok=True)
 
+    # Initialize TensorBoard
+    log_dir = os.path.join(save_folder, "tensorboard_logs")
+    writer = SummaryWriter(log_dir)
+
     # Define paths for saving best and last checkpoints
     best_ckpt_path = os.path.join(save_folder, "best_ckpt.pt")
     last_ckpt_path = os.path.join(save_folder, "last_ckpt.pt")
@@ -182,7 +185,7 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         if len(train_loaders) > 1:
             print(f"Stage {stage_idx + 1} - Age months {age_in_months[stage_idx]}:\n")
         for epoch in range(start_epoch, num_epochs * (stage_idx+1)):
-            print(f"EPOCH {epoch + 1}/{num_epochs}:")
+            print(f"EPOCH {epoch + 1}/{num_epochs * (stage_idx+1)}:")
             # Train phase
             model.train()
             running_loss = 0.0
@@ -234,6 +237,13 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
             val_precisions.append(val_precision)
             val_recalls.append(val_recall)
 
+            # Inside training loop
+            writer.add_scalar('Loss/Train', train_loss, epoch)
+            writer.add_scalar('Loss/Validation', val_loss, epoch)
+            writer.add_scalar('Precision', val_precision, epoch)
+            writer.add_scalar('Recall', val_recall, epoch)
+
+
             print(f"Training Loss: {train_loss:.4f},   Validation Loss: {val_loss:.4f}")
             print(f"Precision:     {val_precision:.2f},     Recall:          {val_recall:.2f}\n")
 
@@ -273,9 +283,11 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
 
     print(f"Saving results and plots to {save_folder}...\n")
     # Plot and save figures
-    plot_losses(all_train_losses, val_losses, save_folder)
-    plot_metrics(all_val_recalls, val_precisions, save_folder)
+    plot_losses(all_train_losses, val_losses, save_folder, stage_boundaries)
+    plot_metrics(all_val_recalls, val_precisions, save_folder, stage_boundaries)
     plot_confusion_matrix(best_conf_matrix, save_folder)
+
+    writer.close()
 
 
 if __name__ == "__main__":
