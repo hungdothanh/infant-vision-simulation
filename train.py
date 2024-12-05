@@ -211,8 +211,8 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
 
     print(f"Saving results and plots to {save_folder}...\n")
     # Plot and save figures
-    plot_losses(train_losses, val_losses, num_epochs, save_folder)
-    plot_metrics(val_recalls, val_precisions, num_epochs, save_folder)
+    plot_losses(train_losses, val_losses, save_folder)
+    plot_metrics(val_recalls, val_precisions, save_folder)
     plot_confusion_matrix(best_conf_matrix, save_folder)
 
 
