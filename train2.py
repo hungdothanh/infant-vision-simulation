@@ -75,7 +75,7 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
             apply_contrast=apply_contrast,
             transform=transform
         )
-        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         train_loaders.append(dataloader)
         print(f"Done. Number of images in the training set: {len(dataset)}\n")
 
