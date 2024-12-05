@@ -215,8 +215,8 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
                         val_loss += loss.item()
                         _, pred = torch.max(outputs, 1)
 
-                        all_labels = torch.cat((all_labels, labels.cpu()))
-                        all_preds = torch.cat((all_preds, pred.cpu()))
+                        all_labels = torch.cat((all_labels, labels))
+                        all_preds = torch.cat((all_preds, pred))
                         # val_loader_tqdm.set_postfix(loss=loss.item())
 
             val_loss = val_loss / len(val_loader)
