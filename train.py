@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import argparse
 import torch
@@ -14,7 +15,7 @@ from utils.plots import plot_losses, plot_metrics, plot_confusion_matrix
 from utils.metrics import precision_recall
 
 
-def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights, num_epochs, batch_size, lr, unfreeze_layer, save_folder):
+def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights, num_epochs, batch_size, lr, unfreeze_layer, resume_checkpoint, save_folder_name):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print("Creating dataset...\n")
@@ -90,19 +91,35 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
 
     model = model.to(device)
 
-    print("Done! Summary of model architecture: ")
-    summary(model, input_size=(3, 224, 224), device=str(device))
+    """ Uncomment to print model architecture summary """
+    # print("Done! Summary of model architecture: ")
+    # summary(model, input_size=(3, 224, 224), device=str(device))
 
     # Define loss function and optimizer
     criterion = CrossEntropyLoss()
     optimizer = SGD(model.parameters(), lr=lr, momentum=0.9)
 
-    # Create directory for saving best weights
+    # Create directory for saving best weights and plots
+    save_folder = os.path.join("results", save_folder_name)
+    counter = 0
+    while os.path.exists(save_folder):
+        counter += 1
+        save_folder = os.path.join("results", f"{save_folder_name}_{counter}")
     os.makedirs(save_folder, exist_ok=True)
-    best_weight_path = os.path.join(save_folder, "best_weights.pth")
+    best_ckpt_path = os.path.join(save_folder, "best_ckpt.pt")
+    last_ckpt_path = os.path.join(save_folder, "last_ckpt.pt")
     best_val_loss = float('inf')
     best_conf_matrix = torch.zeros(num_classes, num_classes)
     best_epoch = 0
+    start_epoch = 0
+
+    # Resume training if checkpoint is provided
+    if resume_checkpoint:
+        print(f"Resuming training from checkpoint: {resume_checkpoint}")
+        checkpoint = torch.load(resume_checkpoint)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch'] + 1  # Resume from the next epoch
 
     # Lists for logging and plotting
     train_losses, val_losses = [], []
@@ -112,12 +129,12 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
     start_time = time.time()  # Start timer
     # Start training...
     print("\nStart training! \n")
-    for epoch in range(num_epochs):
+    for epoch in range(start_epoch, num_epochs):
+        print(f"EPOCH {epoch + 1}/{num_epochs}:")
         # Train phase
         model.train()
         running_loss = 0.0
-
-        with tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs}") as train_loader_tqdm:
+        with tqdm(train_loader, desc="Training", unit="batch") as train_loader_tqdm:
             for inputs, labels in train_loader_tqdm:
                 inputs, labels = inputs.to(device), labels.to(device)
 
@@ -128,6 +145,7 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
                 optimizer.step()
 
                 running_loss += loss.item()
+                # train_loader_tqdm.set_postfix(loss=loss.item())
 
         train_loss = running_loss / len(train_loader)
         train_losses.append(train_loss)
@@ -139,25 +157,24 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
         all_preds = torch.tensor([], dtype=torch.long).to(device)
 
         with torch.no_grad():
-            for inputs, labels in val_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
+            with tqdm(val_loader, desc="Validation", unit="batch") as val_loader_tqdm:
+                for inputs, labels in val_loader_tqdm:
+                    inputs, labels = inputs.to(device), labels.to(device)
 
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                val_loss += loss.item()
-                _, pred = torch.max(outputs, 1)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
+                    val_loss += loss.item()
+                    _, pred = torch.max(outputs, 1)
 
-                all_labels = torch.cat((all_labels, labels.cpu()))
-                all_preds = torch.cat((all_preds, pred.cpu()))
+                    all_labels = torch.cat((all_labels, labels.cpu()))
+                    all_preds = torch.cat((all_preds, pred.cpu()))
+                    # val_loader_tqdm.set_postfix(loss=loss.item())
 
         val_loss = val_loss / len(val_loader)
         val_losses.append(val_loss)
 
-        # print("\nAll labels: \n", all_labels)
-        # print("All predictions: \n", all_preds)
-
         class_precision, class_recall, conf_matrix = precision_recall(all_preds, all_labels, num_classes)
-        # print("Class precision in form of [(precision for dog, precision for cat): \n", class_precision)
+
         class_precisions.append(class_precision)
         class_recalls.append(class_recall)
         val_precision = class_precision.mean().item()
@@ -168,17 +185,19 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
         print(f"Training Loss: {train_loss:.4f},   Validation Loss: {val_loss:.4f}")
         print(f"Precision:     {val_precision:.2f},     Recall:          {val_recall:.2f}\n")
 
-        # Save the best model
+        # Save checkpoint
+        torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict(),}, last_ckpt_path)
         if val_loss < best_val_loss or best_val_loss is None:
             best_epoch = epoch
             best_val_loss = val_loss
             best_conf_matrix = conf_matrix
-            torch.save(model.state_dict(), best_weight_path)
+            torch.save(model.state_dict(), best_ckpt_path)
 
-    print("Training completed!\n")
+
+
     end_time = time.time()  # End timer
     total_time = (end_time - start_time)/3600
-    print(f"Total training time: {total_time:.2f} hours\n")
+    print(f"Training completed! - Total training time: {total_time:.2f} hours\n")
 
     print(f"Performance Summary (best model at epoch {best_epoch}):")
     print("-----------------------------")
@@ -190,6 +209,7 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
         print(f"{class_name}\t{precision:.2f}\t\t{recall:.2f}")
     print("-----------------------------\n")
 
+    print(f"Saving results and plots to {save_folder}...\n")
     # Plot and save figures
     plot_losses(train_losses, val_losses, num_epochs, save_folder)
     plot_metrics(val_recalls, val_precisions, num_epochs, save_folder)
@@ -210,7 +230,8 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
     parser.add_argument("--unfreeze", type=str, default='', 
                         help="Comma-separated layer names to unfreeze, e.g., 'fc,layer4' (leave blank or by defaults to train normally)")
-    parser.add_argument("--save_folder", type=str, default="results", help="Folder name to save best weights and plots")
+    parser.add_argument("--resume", type=str, default='', help="Path to checkpoint to resume training")
+    parser.add_argument("--name", type=str, default="exp", help="Folder name to save checkpoints and plots")
 
     args = parser.parse_args()
 
@@ -225,5 +246,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         lr=args.lr,
         unfreeze_layer=args.unfreeze,
-        save_folder=args.save_folder
+        resume_checkpoint=args.resume,
+        save_folder_name=args.name
     )
