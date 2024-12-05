@@ -3,15 +3,15 @@ import seaborn as sns
 import os
 
 
-def plot_losses(train_losses, val_losses, num_epochs, save_dir):
+def plot_losses(train_losses, val_losses, save_dir):
     fig, axs = plt.subplots(2, 1, figsize=(10, 8))
 
-    axs[0].plot(range(1, num_epochs + 1), train_losses, label='Train Loss')
+    axs[0].plot(range(1, len(train_losses) + 1), train_losses, label='Train Loss')
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].set_title('Training Loss')
 
-    axs[1].plot(range(1, num_epochs + 1), val_losses, label='Validation Loss', color='orange')
+    axs[1].plot(range(1, len(val_losses) + 1), val_losses, label='Validation Loss', color='orange')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Loss')
     axs[1].set_title('Validation Loss')
@@ -22,18 +22,18 @@ def plot_losses(train_losses, val_losses, num_epochs, save_dir):
     fig.savefig(f"{save_dir}/loss_curves.png")
     plt.close(fig)
 
-def plot_metrics(val_recalls, val_precisions, num_epochs, save_dir):
+def plot_metrics(val_recalls, val_precisions, save_dir):
     fig, axs = plt.subplots(2, 1, figsize=(10, 8))
 
-    axs[0].plot(range(1, num_epochs + 1), val_recalls, label='Recall', color='green')
+    axs[0].plot(range(1, len(val_precisions) + 1), val_precisions, label='Precision', color='purple')
     axs[0].set_xlabel('Epoch')
-    axs[0].set_ylabel('Recall')
-    axs[0].set_title('Validation Recall')
+    axs[0].set_ylabel('Precision')
+    axs[0].set_title('Validation Precision')
 
-    axs[1].plot(range(1, num_epochs + 1), val_precisions, label='Precision', color='purple')
+    axs[1].plot(range(1, len(val_recalls) + 1), val_recalls, label='Recall', color='green')
     axs[1].set_xlabel('Epoch')
-    axs[1].set_ylabel('Precision')
-    axs[1].set_title('Validation Precision')
+    axs[1].set_ylabel('Recall')
+    axs[1].set_title('Validation Recall')
 
     plt.tight_layout()
 
