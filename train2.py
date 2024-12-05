@@ -44,14 +44,14 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
     ])
     
     # Create datasets and dataloaders based on age_in_months
+    train_loaders = []
+    stage_boundaries = []
     # print number of images in the training dataset/dataloader, for each case if age_in_months is provided (this one all dataset used are the same, just different in transformation) and if not
     if age_in_months:
         age_in_months = age_in_months.split(",")
         age_in_months = [int(age) for age in age_in_months]
         print(f"Creating {len(age_in_months)} datasets and dataloaders for training w.r.t {len(age_in_months)} stages of cirriculum learning...\n")
 
-        train_loaders = []
-        stage_boundaries = []
         for i, age in enumerate(age_in_months):
             dataset = InfantVisionDataset(
                 image_dir=train_dir,
@@ -66,6 +66,7 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         print(f"Done. Number of images in the training set: {len(dataset)}\n")
     else:
         # if no age provided, set it to default 200 months
+        print("Creating training dataset and dataloader...\n")
         age_in_months = 200
         dataset = InfantVisionDataset(
             image_dir=train_dir,
