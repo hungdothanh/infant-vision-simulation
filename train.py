@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import yaml
 import argparse
 import torch
 from torch.utils.data import DataLoader
@@ -15,25 +16,64 @@ from utils.plots import plot_losses, plot_metrics, plot_confusion_matrix
 from utils.metrics import precision_recall
 
 
-def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights, num_epochs, batch_size, lr, unfreeze_layer, resume_checkpoint, save_folder_name):
+def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, batch_size, lr, unfreeze_layer, resume_checkpoint, save_folder_name):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}\n")
 
-    print("Creating dataset...\n")
-    # Define transformations
+    # Define directories from data.yaml
+    with open(data, 'r') as file:
+        data = yaml.safe_load(file)
+    train_dir = data['train']
+    val_dir = data['val']
+
+    # Define class
+    num_classes = data['num_classes']
+    class_names = data['class_names']
+
+    # Check if directories exist
+    if not os.path.exists(train_dir) or not os.path.exists(val_dir):
+        raise FileNotFoundError("Training or validation directory not found. Please check the paths in data.yaml")
+    
+    # Define base transformations
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+    
+    # Create datasets and dataloaders based on age_in_months
+    # print number of images in the training dataset/dataloader, for each case if age_in_months is provided (this one all dataset used are the same, just different in transformation) and if not
+    if age_in_months:
+        age_in_months = age_in_months.split(",")
+        age_in_months = [int(age) for age in age_in_months]
+        print(f"Creating {len(age_in_months)} datasets and dataloaders for training w.r.t {len(age_in_months)} stages of cirriculum learning...\n")
 
-    # Initialize Dataset and DataLoader
-    train_dataset = InfantVisionDataset(
-        image_dir=train_dir,
-        age_in_months=age_in_months,
-        apply_blur=apply_blur,
-        apply_contrast=apply_contrast,
-        transform=transform
-    )
+        train_loaders = []
+        for i, age in enumerate(age_in_months):
+            dataset = InfantVisionDataset(
+                image_dir=train_dir,
+                age_in_months=age,
+                apply_blur=apply_blur,
+                apply_contrast=apply_contrast,
+                transform=transform
+            )
+            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+            train_loaders.append(dataloader)
+        print(f"Done. Number of images in the training set: {len(dataset)}\n")
+    else:
+        # if no age provided, set it to default 200 months
+        age_in_months = 200
+        dataset = InfantVisionDataset(
+            image_dir=train_dir,
+            age_in_months=age_in_months,
+            apply_blur=apply_blur,
+            apply_contrast=apply_contrast,
+            transform=transform
+        )
+        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        print(f"Done. Number of images in the training set: {len(dataset)}\n")
+
+    print("Creating validation dataset and dataloader...\n")
     val_dataset = InfantVisionDataset(
         image_dir=val_dir,
         age_in_months=age_in_months,
@@ -41,17 +81,8 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
         apply_contrast=False,
         transform=transform
     )
-
-    print("Done! Loading into dataloader...\n")
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-    # Define class
-    num_classes = 2
-    class_names = ["dog", "cat"]
-
-    # CUSTOMIZED RESNET50 WITH INPUT PRE-TRAINED WEIGHT --------------------------
-    # model = ResNet50(num_classes=num_classes).to(device)
+    print(f"Done. Number of images in the validation set: {len(val_dataset)}\n")
 
     
     # Load model based on input arguments
@@ -218,9 +249,8 @@ def train(train_dir, val_dir, age_in_months, apply_blur, apply_contrast, weights
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_dir", type=str, help="Path to the directory containing images")
-    parser.add_argument("--val_dir", type=str, help="Path to the directory containing validation images")
-    parser.add_argument("--age", type=int, default=0, help="Age of the infant in months")
+    parser.add_argument("--data", type=str, help="Path to the directory containing images")
+    parser.add_argument("--age", type=str, default='', help="Comma-separated list of ages in months for each stage of cirriculum learning")
     parser.add_argument("--blur", action="store_true", help="Apply blur transformation")
     parser.add_argument("--contrast", action="store_true", help="Apply contrast transformation")
     parser.add_argument("--weights", type=str, default='', 
@@ -236,8 +266,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train(
-        train_dir=args.train_dir,
-        val_dir=args.val_dir,
+        data=args.data,
         age_in_months=args.age,
         apply_blur=args.blur,
         apply_contrast=args.contrast,
