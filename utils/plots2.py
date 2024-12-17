@@ -7,13 +7,13 @@ def plot_losses(train_losses, val_losses, save_dir, stage_boundaries):
     fig, axs = plt.subplots(1, 2, figsize=(10, 6))
 
     # Plot training losses
-    axs[0].plot(range(1, len(train_losses) + 1), train_losses, label='Train Loss')
+    axs[0].plot(range(0, len(train_losses)), train_losses, label='Train Loss')
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].set_title('Training Loss')
 
     # Plot validation losses
-    axs[1].plot(range(1, len(val_losses) + 1), val_losses, label='Validation Loss', color='orange')
+    axs[1].plot(range(0, len(val_losses)), val_losses, label='Validation Loss', color='orange')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Loss')
     axs[1].set_title('Validation Loss')
@@ -36,13 +36,13 @@ def plot_metrics(val_precisions, val_recalls, save_dir, stage_boundaries):
     fig, axs = plt.subplots(1, 2, figsize=(10, 6))
 
     # Plot validation precisions
-    axs[0].plot(range(1, len(val_precisions) + 1), val_precisions, label='Precision', color='purple')
+    axs[0].plot(range(0, len(val_precisions)), val_precisions, label='Precision', color='purple')
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Precision')
     axs[0].set_title('Validation Precision')
 
     # Plot validation recalls
-    axs[1].plot(range(1, len(val_recalls) + 1), val_recalls, label='Recall', color='green')
+    axs[1].plot(range(0, len(val_recalls)), val_recalls, label='Recall', color='green')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Recall')
     axs[1].set_title('Validation Recall')

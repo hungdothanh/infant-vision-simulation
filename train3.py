@@ -105,7 +105,7 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         model.load_state_dict(torch.load(weights))
         print(f"Loaded weights from {weights}\n")
     else:
-        model = models.resnet50(pretrained=False)
+        model = models.resnet18(pretrained=False)
         model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
         print("Training from scratch.\n")
 
@@ -185,7 +185,7 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         if len(train_loaders) > 1:
             print(f"Stage {stage_idx + 1} - Age months {age_in_months[stage_idx]}:\n")
         for epoch in range(start_epoch, num_epochs * (stage_idx+1)):
-            print(f"EPOCH {epoch + 1}/{num_epochs * (stage_idx+1)}:")
+            print(f"EPOCH {epoch + 1}/{num_epochs * len(train_loaders)}")
             # Train phase
             model.train()
             running_loss = 0.0
@@ -283,8 +283,8 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
 
     print(f"Saving results and plots to {save_folder}...\n")
     # Plot and save figures
-    plot_losses(all_train_losses, val_losses, save_folder, stage_boundaries)
-    plot_metrics(all_val_recalls, val_precisions, save_folder, stage_boundaries)
+    plot_losses(all_train_losses, all_val_losses, save_folder, stage_boundaries)
+    plot_metrics(all_val_precisions, all_val_recalls, save_folder, stage_boundaries)
     plot_confusion_matrix(best_conf_matrix, save_folder)
 
     writer.close()
@@ -321,3 +321,6 @@ if __name__ == "__main__":
         resume_checkpoint=args.resume,
         save_folder_name=args.name
     )
+
+
+# python train3.py --data 'dataset/catdog/data.yaml' --age '0,30,60' --blur --epochs 10 --batch_size 64 --lr 0.01 --name 'cirriculum1-blur'
