@@ -10,7 +10,7 @@ def plot_losses(train_losses, val_losses, save_dir, stage_boundaries):
     fig, axs = plt.subplots(1, 2, figsize=(10, 6))
 
     # Plot training losses
-    axs[0].plot(range(0, len(train_losses)), train_losses, label='Train Loss')
+    axs[0].plot(range(0, len(train_losses)), train_losses, label='Train Loss', color='blue')
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].set_title('Training Loss')
@@ -21,6 +21,10 @@ def plot_losses(train_losses, val_losses, save_dir, stage_boundaries):
     axs[1].set_ylabel('Loss')
     axs[1].set_title('Validation Loss')
 
+    max_value = max(max(train_losses), max(val_losses))
+    axs[0].set_ylim(-max_value * 0.1, max_value)
+    axs[1].set_ylim(-max_value * 0.1, max_value)
+
     # Add stage boundaries and labels to both train and val loss curve
     start = 0
 
@@ -28,16 +32,16 @@ def plot_losses(train_losses, val_losses, save_dir, stage_boundaries):
         for ax in axs:
             ax.axvline(x=boundary, color='black', linestyle='--')
             # Add text annotations for each stage
-            ax.annotate(f'Stage {i+1}', xy=((start + boundary) / 2, 0), xytext=(0, -20),
-                        textcoords='offset points', ha='center', va='top', fontsize=12, color='black')
+            ax.text((start + boundary) / 2, -max_value * 0.06, f'Stage {i+1}', 
+                horizontalalignment='center', verticalalignment='center', fontsize=11, color='red')
         start = boundary
 
     # Add text annotation for the last stage
     for ax in axs:
-        ax.annotate(f'Stage {len(stage_boundaries)}', xy=((start + len(train_losses)) / 2, 0), xytext=(0, -20),
-                    textcoords='offset points', ha='center', va='top', fontsize=12, color='black')
+        ax.text((start + len(train_losses)) / 2, -max_value * 0.06, f'Stage {len(stage_boundaries)}', 
+                horizontalalignment='center', verticalalignment='center', fontsize=11, color='red')
 
-    plt.tight_layout(rect=[0, 0.05, 1, 1])
+    plt.tight_layout()
     os.makedirs(save_dir, exist_ok=True)
     fig.savefig(f"{save_dir}/loss_curves.png")
     plt.close(fig)
@@ -58,21 +62,25 @@ def plot_metrics(val_precisions, val_recalls, save_dir, stage_boundaries):
     axs[1].set_ylabel('Recall')
     axs[1].set_title('Validation Recall')
 
+    max_value = max(max(val_precisions), max(val_recalls))
+    axs[0].set_ylim(-max_value * 0.1, max_value)
+    axs[1].set_ylim(-max_value * 0.1, max_value)
+
     # Add stage boundaries and labels to both precision and recall curve
     start = 0
     for i, boundary in enumerate(stage_boundaries[:-1]):
         for ax in axs:
             ax.axvline(x=boundary, color='black', linestyle='--')
             # Add text annotations for each stage
-            ax.annotate(f'Stage {i+1}', xy=((start + boundary) / 2, 0), xytext=(0, -20),
-                        textcoords='offset points', ha='center', va='top', fontsize=12, color='black')
+            ax.text((start + boundary) / 2, -max_value * 0.06, f'Stage {i+1}', 
+                horizontalalignment='center', verticalalignment='center', fontsize=11, color='red')
             
         start = boundary
     
     # Add text annotation for the last stage
     for ax in axs:
-        ax.annotate(f'Stage {len(stage_boundaries)}', xy=((start + len(val_precisions)) / 2, 0), xytext=(0, -20),
-                    textcoords='offset points', ha='center', va='top', fontsize=12, color='black')
+        ax.text((start + len(val_precisions)) / 2, -max_value * 0.06, f'Stage {len(stage_boundaries)}', 
+                horizontalalignment='center', verticalalignment='center', fontsize=11, color='red')
 
     plt.tight_layout()
     os.makedirs(save_dir, exist_ok=True)
