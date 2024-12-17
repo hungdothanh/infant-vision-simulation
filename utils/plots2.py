@@ -186,4 +186,4 @@ def visualize(dataloaders, age_in_months, transform_type, num_images, save_dir):
     plt.subplots_adjust(hspace=-0.2)
     plt.tight_layout(rect=[0, 0, 1, 1])  # Leave space for the title
     fig.savefig(f"{save_dir}/dataloaders.png")
-    plt.show()
+    plt.close(fig)
