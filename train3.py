@@ -198,7 +198,7 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         if len(train_loaders) > 1:
             print(f"Stage {stage_idx + 1} - Age months {age_in_months[stage_idx]}:\n")
         for epoch in range(start_epoch, num_epochs * (stage_idx+1)):
-            print(f"EPOCH {epoch}/{num_epochs * len(train_loaders - 1)}")
+            print(f"EPOCH {epoch}/{num_epochs * len(train_loaders)-1}")
             # Train phase
             model.train()
             running_loss = 0.0
