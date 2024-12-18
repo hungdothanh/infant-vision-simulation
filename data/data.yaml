@@ -1,0 +1,8 @@
+
+
+# include path to train and val set
+train: dataset/train      
+val: dataset/val
+
+num_classes: 2
+class_names: ['dog', 'cat']
