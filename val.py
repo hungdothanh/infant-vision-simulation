@@ -6,7 +6,6 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from data.dataloader import InfantVisionDataset
-from model import ResNet50
 from utils.plots import plot_images_with_predictions
 
 
