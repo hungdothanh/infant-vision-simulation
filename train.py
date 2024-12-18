@@ -155,13 +155,13 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         save_folder = os.path.join("results", f"{save_folder_name}_{counter}")
     os.makedirs(save_folder, exist_ok=True)
 
-    # Save visualization of transformations if apply_blur or apply_contrast is True
+    # Save visualization for dataloaders with different transformations if apply_blur or apply_contrast is True
     if apply_blur or apply_contrast:
         transform_type = "Blur + Contrast" if apply_blur and apply_contrast else "Blur" if apply_blur else "Contrast" if apply_contrast else "None"
-        save_path = f"results/{save_folder_name}/transform_visualization.png"
         num_images = 5
         print("Saving visualization of transformations for multi-dataloaders...\n")
         visualize(train_loaders, age_in_months, transform_type, num_images, save_folder)
+        print(f"Done! Check {save_folder} for the visualization of transformations.\n")
 
 
     # Define paths for saving best and last checkpoints
@@ -320,5 +320,5 @@ if __name__ == "__main__":
         save_folder_name=args.name
     )
 
-
-# python train3.py --data 'dataset/catdog/data.yaml' --age '0,30,60' --blur --epochs 10 --batch_size 64 --lr 0.01 --name 'cirriculum1-blur'
+# Run the following command to train the model:
+# python train.py --data 'data/data.yaml' --age '0,30,60' --blur --epochs 10 --batch_size 64 --lr 0.01 --name 'cirriculum1-blur'
