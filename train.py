@@ -118,7 +118,8 @@ def train(data, age_in_months, apply_blur, apply_contrast, weights, num_epochs, 
         print("Training from scratch.\n")
 
 
-    # Freeze layers based on the unfreeze_layer input
+    # Freeze layers based on the unfreeze_layer input 
+    # (Optinal only for fine-tuning when training with pre-trained weights from ImageNet)
     if unfreeze_layer:
         # Freeze all parameters initially
         for param in model.parameters():
