@@ -30,21 +30,22 @@ def plot_losses(train_losses, val_losses, save_dir, stage_boundaries):
 
     for i, boundary in enumerate(stage_boundaries[:-1]):
         for ax in axs:
-            ax.axvline(x=boundary, color='black', linestyle='--')
+            ax.axvline(x=boundary - 0.5, color='black', linestyle='--')
             # Add text annotations for each stage
-            ax.text((start + boundary) / 2, -max_value * 0.06, f'Stage {i+1}', 
+            ax.text((start + boundary) / 2 - 0.5, -max_value * 0.06, f'Stage {i+1}', 
                 horizontalalignment='center', verticalalignment='center', fontsize=9, color='red')
         start = boundary
 
     # Add text annotation for the last stage
     for ax in axs:
-        ax.text((start + len(train_losses)) / 2, -max_value * 0.06, f'Stage {len(stage_boundaries)}', 
+        ax.text((start + len(train_losses)) / 2 - 0.5, -max_value * 0.06, f'Stage {len(stage_boundaries)}', 
                 horizontalalignment='center', verticalalignment='center', fontsize=9, color='red')
 
     plt.tight_layout()
     os.makedirs(save_dir, exist_ok=True)
     fig.savefig(f"{save_dir}/loss_curves.png")
-    plt.close(fig)
+    plt.show()
+    # plt.close(fig)
 
     
 def plot_metrics(val_precisions, val_recalls, save_dir, stage_boundaries):
