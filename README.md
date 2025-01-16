@@ -29,7 +29,19 @@ This project simulates infant vision development using image transformations (Ga
 
 ## Visual Overview
 ### Curriculum and Sample Images
-![Training Curriculum](figures/curriculum/training-curriculum.png)
+
+- **Sample images from different curriculum networks**  
+  ![Gaussian Blur Samples](figures/curriculum/net2-blur.png)  
+  *Sample images for Network 2 with Gaussian blur transformation*  
+
+  ![Contrast Adjustment Samples](figures/curriculum/net3-contrast.png)  
+  *Sample images for Network 3 with contrast adjustment*  
+
+  ![Combined Transformation Samples](figures/curriculum/net4-both.png)  
+  *Sample images for Network 4 with both Gaussian blur and contrast adjustment*
+
+- **Training Curriculum Overview**  
+  ![Training Curriculum](figures/curriculum/training-curriculum.png)
 
 ### Learning Curves
 - **No Transformation**  

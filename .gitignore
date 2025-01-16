@@ -4,7 +4,6 @@ dataset/
 dataset1/
 runs/
 best_weights/
-figures/
 exp/
 results/
 dataset.zip
