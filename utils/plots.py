@@ -146,7 +146,7 @@ def visualize(dataloaders, age_in_months, transform_type, num_images, save_dir):
     std = [0.229, 0.224, 0.225]
 
     num_stages = len(dataloaders)
-    fig, axes = plt.subplots(num_stages, num_images + 1, figsize=(15, 5 * num_stages))
+    fig, axes = plt.subplots(num_stages, num_images + 1, figsize=(10, 5))
     # fig.suptitle(f"Visualizing {transform_type} Transformations at Different Ages", fontsize=16, y=0.92)
     # fig.set_size_inches(15, 5 * num_stages)
 
@@ -183,8 +183,8 @@ def visualize(dataloaders, age_in_months, transform_type, num_images, save_dir):
                         fontsize=13, color="black", rotation=0, ha="left", va="center")
         ax_text.axis("off")
 
-    # Save and show the figure
-    plt.subplots_adjust(hspace=-0.2)
-    plt.tight_layout(rect=[0, 0, 1, 1])  # Leave space for the title
+    # Save and show the figplt.subplots_adjust(hspace=-0.7)ure
+    
+    plt.tight_layout()
     fig.savefig(f"{save_dir}/dataloaders.png")
     plt.close(fig)

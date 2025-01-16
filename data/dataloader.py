@@ -22,12 +22,12 @@ class InfantVisionDataset(Dataset):
         kernel_size = 15
         max_sigma = 4.0
         min_sigma = 0.1
-        sigma = max(min_sigma, max_sigma - (self.age_in_months / 60) * (max_sigma - min_sigma))
+        sigma = max(min_sigma, max_sigma - (self.age_in_months / 12) * (max_sigma - min_sigma))
         return transforms.GaussianBlur(kernel_size=(kernel_size, kernel_size), sigma=(sigma, sigma))
 
     def get_contrast_transform(self):
         age_in_weeks = self.age_in_months * 4.348125  # max age months = 125
-        contrast_factor = min(age_in_weeks / 500, 1)
+        contrast_factor = min(age_in_weeks / 52.1775, 1)
 
         def my_adjust_contrast():
             def _func(img):

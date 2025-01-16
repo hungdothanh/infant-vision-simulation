@@ -1,8 +1,8 @@
 
 
 # include path to train and val set
-train: dataset/train      
-val: dataset/val
+train: C:\Users\hungd\OneDrive\FAU\StudOn\WS24\Computational Visual Perception (CVP)\Project\Project 2\my-proj-2\infant-vision-simulation\dataset\train   
+val: C:\Users\hungd\OneDrive\FAU\StudOn\WS24\Computational Visual Perception (CVP)\Project\Project 2\my-proj-2\infant-vision-simulation\dataset\val
 
 num_classes: 2
 class_names: ['dog', 'cat']
