@@ -58,6 +58,8 @@ This project simulates infant vision development using image transformations (Ga
 2. Dhiren, S. (2021). *Cats vs Dogs Dataset*. Kaggle. [Link](https://www.kaggle.com/datasets/dhirensk/cats-vs-dogs-training8000test2000)  
 3. Sheybani, S. et al. "Curriculum Learning with Infant Egocentric Videos." Indiana University, 2024. [Link](https://cogdev.lab.indiana.edu/research/curriculum_learning_with_infant_egocentric_videos.pdf)
 
+---
+# Implementation
 
 ## Install
 Clone repo and install [requirements.txt](./requirements.txt) in a Python>=3.8.0 environment, including PyTorch>=1.8.
